@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLW Data Transformer V7.2</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --navy: #0f1c2e;
+    --navy2: #1a2d44;
+    --teal: #0ea5c9;
+    --teal-light: #e0f6fb;
+    --amber: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --gray: #64748b;
+    --light: #f1f5f9;
+    --white: #ffffff;
+    --border: #e2e8f0;
+    --enter-bg: #d1fae5;
+    --enter-text: #065f46;
+    --exit-bg: #fee2e2;
+    --exit-text: #991b1b;
+    --total-bg: #1e3a5f;
+    --total-text: #bfdbfe;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Prompt', sans-serif;
+    background: var(--light);
+    color: #1e293b;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--navy);
+    padding: 18px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo-box {
+    width: 44px; height: 44px;
+    background: var(--teal);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Chakra Petch', monospace;
+    font-weight: 700; color: #fff; font-size: 15px;
+  }
+  .header h1 {
+    font-family: 'Chakra Petch', monospace;
+    color: #fff; font-size: 1.2rem; font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .header p { color: #94a3b8; font-size: 0.78rem; margin-top: 2px; }
+  .version-badge {
+    background: var(--teal); color: #fff;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 600;
+    font-family: 'Chakra Petch', monospace;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main { padding: 28px 30px; max-width: 1600px; margin: 0 auto; }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .upload-row {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .upload-zone {
+    flex: 1; min-width: 220px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 11px 18px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f8fafc;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--teal); background: #e0f6fb;
+  }
+  .upload-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .upload-text h3 { font-size: 0.85rem; font-weight: 600; color: #334155; }
+  .upload-text p  { font-size: 0.72rem; color: var(--gray); margin-top: 1px; }
+  .upload-zone input[type=file] { display: none; }
+
+  .reset-btn {
+    background: #f1f5f9; color: #64748b;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px; padding: 9px 16px;
+    font-family: 'Prompt', sans-serif;
+    font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .reset-btn:hover { background: #fee2e2; color: var(--red); border-color: #fca5a5; }
+
+  .file-list { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .file-item {
+    display: flex; align-items: center; gap: 8px;
+    background: #f8fafc; border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: none; } }
+  .file-item .file-icon { font-size: 1rem; }
+  .file-item .file-name { font-size: 0.8rem; font-weight: 600; }
+  .file-item .file-sheets { font-size: 0.7rem; color: var(--gray); }
+  .file-item .remove-btn {
+    background: none; border: none; cursor: pointer;
+    color: #94a3b8; font-size: 0.85rem; padding: 1px 5px;
+    border-radius: 4px; transition: all 0.15s; line-height: 1;
+  }
+  .file-item .remove-btn:hover { background: #fee2e2; color: var(--red); }
+
+  .status-bar {
+    margin-top: 10px; padding: 7px 12px;
+    border-radius: 8px; font-size: 0.78rem;
+    display: none; align-items: center; gap: 7px;
+  }
+  .status-bar.processing { display: flex; background: #e0f6fb; color: #0369a1; }
+  .status-bar.done       { display: flex; background: #d1fae5; color: #065f46; }
+  .mini-spin {
+    width: 14px; height: 14px; border: 2px solid #7dd3fc;
+    border-top-color: #0ea5c9; border-radius: 50%;
+    animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+
+  /* ── SUMMARY CARDS ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 16px;
+    border-left: 5px solid transparent;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-card.enter { border-color: var(--green); }
+  .stat-card.exit  { border-color: var(--red); }
+  .stat-card.total { border-color: var(--amber); }
+  .stat-card.doors { border-color: var(--teal); }
+  .stat-icon { font-size: 1.8rem; }
+  .stat-label { font-size: 0.78rem; color: var(--gray); margin-bottom: 3px; }
+  .stat-value {
+    font-family: 'Chakra Petch', monospace;
+    font-size: 1.6rem; font-weight: 700; color: #1e293b;
+  }
+
+  /* ── TABS ── */
+  .results-card {
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .tabs-header {
+    background: #f8fafc;
+    border-bottom: 2px solid var(--border);
+    padding: 0 20px;
+    display: flex; align-items: center; gap: 4px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 14px 22px;
+    border: none; background: transparent;
+    font-family: 'Prompt', sans-serif;
+    font-size: 0.88rem; font-weight: 600;
+    color: var(--gray); cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn:hover { color: var(--teal); }
+  .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+  .tab-badge {
+    background: var(--teal-light);
+    color: var(--teal);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .tab-badge.enter { background: var(--enter-bg); color: var(--enter-text); }
+  .tab-badge.exit  { background: var(--exit-bg);  color: var(--exit-text); }
+
+  /* ── TABLE ── */
+  .tab-content { display: none; padding: 0; }
+  .tab-content.active { display: block; }
+
+  .table-toolbar {
+    padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 10px;
+  }
+  .table-info { font-size: 0.82rem; color: var(--gray); }
+  .table-info strong { color: #334155; }
+
+  .download-btn {
+    background: var(--navy);
+    color: #fff; border: none;
+    border-radius: 8px; padding: 9px 20px;
+    font-family: 'Prompt', sans-serif;
+    font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .download-btn:hover { background: var(--navy2); }
+
+  .table-scroll { overflow: auto; max-height: 540px; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+  thead th {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--navy);
+    color: #e2e8f0;
+    padding: 10px 10px;
+    text-align: center;
+    white-space: nowrap;
+    font-family: 'Chakra Petch', monospace;
+    font-weight: 600; font-size: 0.75rem;
+    border-right: 1px solid rgba(255,255,255,0.08);
+  }
+  thead th:first-child { text-align: center; min-width: 44px; }
+  thead th:nth-child(2) { text-align: left; min-width: 200px; position: sticky; left: 0; z-index: 20; }
+  thead th:last-child { background: #1e3a5f; color: var(--total-text); }
+
+  tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    text-align: center;
+    color: #334155;
+    font-family: 'Chakra Petch', monospace;
+  }
+  tbody td:first-child {
+    color: var(--gray); font-size: 0.75rem; background: #f8fafc;
+  }
+  tbody td:nth-child(2) {
+    text-align: left;
+    font-family: 'Prompt', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: #f8fafc;
+    position: sticky; left: 0; z-index: 5;
+    white-space: nowrap;
+  }
+  tbody td:last-child {
+    font-weight: 700;
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+  tbody tr:hover td { background: #f0f9ff; }
+  tbody tr:hover td:nth-child(2) { background: #e0f2fe; }
+  tbody tr:hover td:last-child { background: #bfdbfe; }
+  tbody tr:nth-child(even) td { background: #fafbfc; }
+  tbody tr:nth-child(even) td:nth-child(2) { background: #fafbfc; }
+
+  /* total row */
+  tr.total-row td {
+    background: var(--total-bg) !important;
+    color: var(--total-text) !important;
+    font-weight: 700 !important;
+    border-top: 2px solid #1e40af;
+    font-family: 'Chakra Petch', monospace !important;
+    font-size: 0.82rem !important;
+  }
+  tr.total-row td:nth-child(2) {
+    color: #93c5fd !important;
+    font-family: 'Prompt', sans-serif !important;
+  }
+  tr.total-row td:last-child {
+    background: #0c1f3a !important;
+    color: var(--amber) !important;
+  }
+
+  td.zero { color: #cbd5e1 !important; }
+
+  /* ── ALERT ── */
+  .alert {
+    border-radius: 10px; padding: 10px 14px;
+    font-size: 0.82rem; margin-top: 10px; display: none;
+  }
+  .alert.error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .alert.info  { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .main { padding: 16px; }
+    .header { padding: 14px 16px; }
+    .header h1 { font-size: 1rem; }
+    .upload-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- (loading replaced by inline status bar) -->
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-box">HLW</div>
+    <div>
+      <h1>HLW Data Transformer</h1>
+      <p>แปลงและสรุปยอดจุดประตู · รองรับหลายไฟล์พร้อมกัน</p>
+    </div>
+  </div>
+  <span class="version-badge">V7.2</span>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- UPLOAD CARD -->
+  <div class="upload-card">
+    <div class="upload-row">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".xlsx" multiple>
+        <span class="upload-icon">📂</span>
+        <div class="upload-text">
+          <h3>คลิกเพื่อเลือกไฟล์ หรือลากวางไฟล์ที่นี่</h3>
+          <p>รองรับหลายไฟล์พร้อมกัน (.xlsx) · ระบบประมวลผลอัตโนมัติทันที</p>
+        </div>
+      </div>
+      <button class="reset-btn" onclick="resetAll()" title="ล้างข้อมูลทั้งหมด">
+        🔄 รีเซ็ต
+      </button>
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+    <div class="status-bar" id="statusBar"><div class="mini-spin"></div><span id="statusText"></span></div>
+    <div class="alert error" id="alertBox"></div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-row" id="summaryRow">
+    <div class="stat-card enter">
+      <div class="stat-icon">🟢</div>
+      <div>
+        <div class="stat-label">ยอดเข้า (Enter)</div>
+        <div class="stat-value" id="statEnter">–</div>
+      </div>
+    </div>
+    <div class="stat-card exit">
+      <div class="stat-icon">🔴</div>
+      <div>
+        <div class="stat-label">ยอดออก (Exit)</div>
+        <div class="stat-value" id="statExit">–</div>
+      </div>
+    </div>
+    <div class="stat-card total">
+      <div class="stat-icon">📊</div>
+      <div>
+        <div class="stat-label">ยอดรวมทั้งหมด</div>
+        <div class="stat-value" id="statTotal">–</div>
+      </div>
+    </div>
+    <div class="stat-card doors">
+      <div class="stat-icon">🚪</div>
+      <div>
+        <div class="stat-label">จำนวนจุดประตู</div>
+        <div class="stat-value" id="statDoors">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS CARD -->
+  <div class="results-card" id="resultsCard">
+    <div class="tabs-header" id="tabsHeader">
+      <button class="tab-btn active" data-tab="tab_placeholder">ตัวอย่างตาราง (รอข้อมูล)</button>
+    </div>
+    <div id="tabContents">
+      <div class="tab-content active" id="tab_placeholder">
+        <div class="table-toolbar">
+          <div class="table-info" style="color:#94a3b8;">
+            📂 <strong style="color:#94a3b8;">ยังไม่มีข้อมูล</strong> · กรุณาอัปโหลดไฟล์ .xlsx เพื่อเริ่มต้นการประมวลผล
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>ลำดับ</th>
+              <th>จุดประตู</th>
+              <th>10.00 น.</th><th>11.00 น.</th><th>12.00 น.</th><th>13.00 น.</th>
+              <th>14.00 น.</th><th>15.00 น.</th><th>16.00 น.</th><th>17.00 น.</th>
+              <th>18.00 น.</th><th>19.00 น.</th><th>20.00 น.</th><th>21.00 น.</th>
+              <th>22.00 น.</th><th>23.00 น.</th><th>24.00 น.</th>
+              <th>รวม</th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="zero">1</td><td style="text-align:left;color:#cbd5e1;">– ประตูที่ 1 –</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td></tr>
+              <tr><td class="zero">2</td><td style="text-align:left;color:#cbd5e1;">– ประตูที่ 2 –</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td></tr>
+              <tr><td class="zero">3</td><td style="text-align:left;color:#cbd5e1;">– ประตูที่ 3 –</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td><td class="zero">–</td></tr>
+              <tr class="total-row"><td>–</td><td>⟨ ยอดรวมทั้งหมด (TOTAL) ⟩</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────
+let loadedFiles = [];     // {file, name, sheets}
+let resultGroups = {};    // groupKey -> {rows[], hourlyTotals[], grandTotal, doorCount}
+let outputWorkbook = null;
+
+// ── HOURS ──────────────────────────────────────────────────────────
+const HOURS = ["10","11","12","13","14","15","16","17","18","19","20","21","22","23","24"];
+const HOUR_LABELS = HOURS.map(h => h === "24" ? "24.00 น." : h + ".00 น.");
+
+// ── TIME PARSING ───────────────────────────────────────────────────
+function parseHour(val) {
+  if (val === null || val === undefined || val === "") return null;
+  // Excel serial time (number between 0 and 1)
+  if (typeof val === 'number' && val < 2) {
+    let h = Math.round(val * 24);
+    return h === 0 ? "24" : h.toString().padStart(2, '0');
+  }
+  // Date object (from cellDates: true)
+  if (val instanceof Date) {
+    let h = val.getHours();
+    return h === 0 ? "24" : h.toString().padStart(2, '0');
+  }
+  // String: "10:00 น." / "10:00" / "24:00 น."
+  let s = String(val).trim();
+  if (s.includes(':')) {
+    let h = parseInt(s.split(':')[0], 10);
+    return h.toString().padStart(2, '0');
+  }
+  return null;
+}
+
+// ── FILE DRAG & DROP ───────────────────────────────────────────────
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag-over');
+  addFiles([...e.dataTransfer.files]);
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  addFiles([...e.target.files]);
+  e.target.value = '';
+});
+
+function addFiles(files) {
+  clearAlert();
+  const xlsxFiles = [...files].filter(f => f.name.endsWith('.xlsx'));
+  if (!xlsxFiles.length) { showAlert('รองรับเฉพาะไฟล์ .xlsx เท่านั้น'); return; }
+
+  let pending = 0;
+  xlsxFiles.forEach(f => {
+    if (loadedFiles.find(x => x.name === f.name)) { showAlert(`ไฟล์ "${f.name}" ถูกเพิ่มไปแล้ว`); return; }
+    pending++;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+        loadedFiles.push({ file: f, name: f.name, sheets: wb.SheetNames });
+      } catch(e) { showAlert('ไม่สามารถอ่านไฟล์ได้: ' + f.name); }
+      pending--;
+      renderFileList();
+      if (pending === 0 && loadedFiles.length > 0) processAllFiles(); // ← auto-process
+    };
+    reader.readAsArrayBuffer(f);
+  });
+}
+
+function removeFile(idx) {
+  loadedFiles.splice(idx, 1);
+  renderFileList();
+  if (loadedFiles.length > 0) processAllFiles();
+  else resetResults();
+}
+
+function resetAll() {
+  loadedFiles = [];
+  resultGroups = {};
+  outputWorkbook = null;
+  renderFileList();
+  resetResults();
+  clearAlert();
+  setStatus('');
+}
+
+function resetResults() {
+  document.getElementById('statEnter').textContent = '–';
+  document.getElementById('statExit').textContent  = '–';
+  document.getElementById('statTotal').textContent = '–';
+  document.getElementById('statDoors').textContent = '–';
+
+  document.getElementById('tabsHeader').innerHTML =
+    '<button class="tab-btn active" data-tab="tab_placeholder">ตัวอย่างตาราง (รอข้อมูล)</button>';
+
+  const phRows = [1,2,3].map(n => `
+    <tr><td class="zero">${n}</td><td style="text-align:left;color:#cbd5e1;">– ประตูที่ ${n} –</td>
+    ${Array(15).fill('<td class="zero">–</td>').join('')}</tr>`).join('');
+
+  const tc = document.getElementById('tabContents');
+  tc.innerHTML = `
+    <div class="tab-content active" id="tab_placeholder">
+      <div class="table-toolbar">
+        <div class="table-info" style="color:#94a3b8;">
+          📂 <strong style="color:#94a3b8;">ยังไม่มีข้อมูล</strong> · กรุณาอัปโหลดไฟล์ .xlsx เพื่อเริ่มต้นการประมวลผล
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>ลำดับ</th><th>จุดประตู</th>
+            <th>10.00 น.</th><th>11.00 น.</th><th>12.00 น.</th><th>13.00 น.</th>
+            <th>14.00 น.</th><th>15.00 น.</th><th>16.00 น.</th><th>17.00 น.</th>
+            <th>18.00 น.</th><th>19.00 น.</th><th>20.00 น.</th><th>21.00 น.</th>
+            <th>22.00 น.</th><th>23.00 น.</th><th>24.00 น.</th><th>รวม</th>
+          </tr></thead>
+          <tbody>
+            ${phRows}
+            <tr class="total-row"><td>–</td><td>⟨ ยอดรวมทั้งหมด (TOTAL) ⟩</td>
+            ${Array(15).fill('<td>–</td>').join('')}</tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderFileList() {
+  const el = document.getElementById('fileList');
+  el.innerHTML = loadedFiles.map((f, i) => `
+    <div class="file-item">
+      <span class="file-icon">📄</span>
+      <span class="file-name">${f.name}</span>
+      <span class="file-sheets">${f.sheets.join(' · ')}</span>
+      <button class="remove-btn" onclick="removeFile(${i})" title="ลบไฟล์นี้">✕</button>
+    </div>
+  `).join('');
+}
+
+function setStatus(mode, text) {
+  const bar = document.getElementById('statusBar');
+  bar.className = 'status-bar' + (mode ? ' ' + mode : '');
+  if (text) document.getElementById('statusText').textContent = text;
+}
+
+// ── MAIN PROCESS ───────────────────────────────────────────────────
+async function processAllFiles() {
+  if (!loadedFiles.length) return;
+  clearAlert();
+  setStatus('processing', 'กำลังประมวลผลข้อมูล…');
+
+  await new Promise(r => setTimeout(r, 40));
+
+  try {
+    resultGroups = {};
+
+    for (const {file} of loadedFiles) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: false });
+
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        const rawData = XLSX.utils.sheet_to_json(ws, { raw: true });
+        if (!rawData.length) continue;
+
+        const keys = Object.keys(rawData[0]);
+        if (keys.length < 2) continue;
+        const timeKey = keys[0];
+        const doorNames = keys.slice(1);
+
+        const isEnter = sheetName.includes('เข้า') || sheetName.toLowerCase().includes('enter') || sheetName.toLowerCase().includes('in');
+        const isExit  = sheetName.includes('ออก')  || sheetName.toLowerCase().includes('exit') || sheetName.toLowerCase().includes('out');
+        const groupKey = isEnter ? 'เข้า (Enter)' : isExit ? 'ออก (Exit)' : sheetName;
+
+        if (!resultGroups[groupKey]) resultGroups[groupKey] = [];
+
+        doorNames.forEach(door => {
+          const hourData = {};
+          rawData.forEach(row => {
+            if (row[timeKey] === undefined || row[timeKey] === null) return;
+            const h = parseHour(row[timeKey]);
+            if (h !== null) hourData[h] = parseInt(row[door] ?? 0, 10) || 0;
+          });
+          resultGroups[groupKey].push({ name: door, hourData });
+        });
+      }
+    }
+
+    buildOutputAndRender();
+    setStatus('done', `✓ ประมวลผลเสร็จสิ้น · ${loadedFiles.length} ไฟล์ · ${Object.keys(resultGroups).length} กลุ่มข้อมูล`);
+  } catch (err) {
+    showAlert('เกิดข้อผิดพลาด: ' + err.message);
+    setStatus('');
+    console.error(err);
+  }
+}
+
+function buildOutputAndRender() {
+  const wb = XLSX.utils.book_new();
+  let totalEnter = 0, totalExit = 0, totalDoors = 0;
+
+  // Build tabs HTML
+  const tabsHeader = document.getElementById('tabsHeader');
+  const tabContents = document.getElementById('tabContents');
+  tabsHeader.innerHTML = '';
+  tabContents.innerHTML = '';
+
+  let firstTab = true;
+  const groupKeys = Object.keys(resultGroups);
+
+  groupKeys.forEach((groupKey, gIdx) => {
+    const doors = resultGroups[groupKey];
+    if (!doors.length) return;
+
+    totalDoors += doors.length;
+
+    // Compute data
+    const hourlyTotals = new Array(HOURS.length).fill(0);
+    let grandTotal = 0;
+    const tableRows = [];
+
+    doors.forEach((door, dIdx) => {
+      const rowVals = HOURS.map((h, hIdx) => {
+        const v = door.hourData[h] ?? 0;
+        hourlyTotals[hIdx] += v;
+        return v;
+      });
+      const rowSum = rowVals.reduce((a, b) => a + b, 0);
+      grandTotal += rowSum;
+      tableRows.push([dIdx + 1, door.name, ...rowVals, rowSum]);
+    });
+
+    // Track totals
+    if (groupKey.includes('เข้า') || groupKey.toLowerCase().includes('enter')) totalEnter += grandTotal;
+    if (groupKey.includes('ออก') || groupKey.toLowerCase().includes('exit'))  totalExit  += grandTotal;
+
+    // Build Excel sheet
+    const headerRow = ['ลำดับ', 'จุดประตู', ...HOUR_LABELS, 'รวม'];
+    const footerRow = ['-', '⟨ ยอดรวมทั้งหมด (TOTAL) ⟩', ...hourlyTotals, grandTotal];
+    const sheetData = [headerRow, ...tableRows, footerRow];
+    const newWS = XLSX.utils.aoa_to_sheet(sheetData);
+    XLSX.utils.book_append_sheet(wb, newWS, 'สรุป_' + groupKey.replace(/[^ก-๙a-zA-Z0-9\s]/g, '').trim());
+
+    // Badge type
+    const isEnter = groupKey.includes('เข้า') || groupKey.toLowerCase().includes('enter');
+    const isExit  = groupKey.includes('ออก')  || groupKey.toLowerCase().includes('exit');
+    const badgeClass = isEnter ? 'enter' : isExit ? 'exit' : '';
+    const badgeLabel = isEnter ? 'เข้า' : isExit ? 'ออก' : 'ข้อมูล';
+
+    // Tab button
+    const tabId = 'tab_' + gIdx;
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (firstTab ? ' active' : '');
+    btn.dataset.tab = tabId;
+    btn.innerHTML = `${groupKey} <span class="tab-badge ${badgeClass}">${doors.length} จุด</span>`;
+    btn.onclick = () => switchTab(tabId);
+    tabsHeader.appendChild(btn);
+
+    // Tab content
+    const div = document.createElement('div');
+    div.className = 'tab-content' + (firstTab ? ' active' : '');
+    div.id = tabId;
+    div.innerHTML = `
+      <div class="table-toolbar">
+        <div class="table-info">
+          <strong>${groupKey}</strong> · ${doors.length} จุดประตู · ยอดรวม: <strong>${grandTotal.toLocaleString()}</strong> คน
+        </div>
+        <button class="download-btn" onclick="downloadExcel()">⬇ บันทึก Excel ทุกชีท</button>
+      </div>
+      <div class="table-scroll">
+        ${buildTableHTML(headerRow, tableRows, footerRow)}
+      </div>
+    `;
+    tabContents.appendChild(div);
+    firstTab = false;
+  });
+
+  outputWorkbook = wb;
+
+  // Update summary cards
+  document.getElementById('statEnter').textContent = totalEnter.toLocaleString();
+  document.getElementById('statExit').textContent  = totalExit.toLocaleString();
+  document.getElementById('statTotal').textContent = (totalEnter + totalExit).toLocaleString();
+  document.getElementById('statDoors').textContent = totalDoors.toLocaleString();
+
+  document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function buildTableHTML(headerRow, bodyRows, footerRow) {
+  let html = '<table><thead><tr>';
+  headerRow.forEach(h => { html += `<th>${h}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  bodyRows.forEach(row => {
+    html += '<tr>';
+    row.forEach((cell, i) => {
+      const isZero = typeof cell === 'number' && cell === 0;
+      html += `<td class="${isZero && i > 1 ? 'zero' : ''}">${typeof cell === 'number' ? cell.toLocaleString() : cell}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  // Footer (total row)
+  html += '<tr class="total-row">';
+  footerRow.forEach((cell, i) => {
+    html += `<td>${typeof cell === 'number' ? cell.toLocaleString() : cell}</td>`;
+  });
+  html += '</tr>';
+
+  html += '</tbody></table>';
+  return html;
+}
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === tabId);
+  });
+}
+
+// ── DOWNLOAD ───────────────────────────────────────────────────────
+function downloadExcel() {
+  if (!outputWorkbook) return;
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(outputWorkbook, `รายงานสรุป_HLW_${stamp}.xlsx`);
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────
+function showAlert(msg) {
+  const el = document.getElementById('alertBox');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function clearAlert() {
+  document.getElementById('alertBox').style.display = 'none';
+}
+</script>
+</body>
+</html>
